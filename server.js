@@ -9,12 +9,13 @@ app.get("/", (req, res) => {
   res.send("Servidor PIX rodando 🚀");
 });
 
-const mercadopago = require("mercadopago");
+const { MercadoPagoConfig, Payment } = require("mercadopago");
 
-mercadopago.configure({
-  access_token: "APP_USR-964750908841284-042013-a2357a68ad09b64c752997470d8f29c7-1812220991",
+const client = new MercadoPagoConfig({
+  accessToken: "APP_USR-964750908841284-042013-a2357a68ad09b64c752997470d8f29c7-1812220991",
 });
 
+const payment = new Payment(client);
 app.post("/pix", async (req, res) => {
   try {
     const payment_data = {
@@ -45,7 +46,13 @@ app.post("/webhook", async (req, res) => {
     if (req.body.type === "payment") {
       const paymentId = req.body.data.id;
 
-      const payment = await mercadopago.payment.findById(paymentId);
+      const paymentData = await payment.get({ id: paymentId });
+
+console.log("Status do pagamento:", paymentData.status);
+
+if (paymentData.status === "approved") {
+  console.log("✅ PAGAMENTO APROVADO!");
+}
 
       console.log("Status do pagamento:", payment.body.status);
 
