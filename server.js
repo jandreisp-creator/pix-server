@@ -9,6 +9,17 @@ app.get("/", (req, res) => {
   res.send("Servidor PIX rodando 🚀");
 });
 
+app.post("/webhook", (req, res) => {
+  console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
+
+  // Aqui você vai tratar pagamento aprovado
+  if (req.body.type === "payment") {
+    console.log("Pagamento recebido!");
+  }
+
+  res.sendStatus(200);
+});
+
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
