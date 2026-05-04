@@ -1,71 +1,75 @@
 const express = require("express");
 const cors = require("cors");
+const { MercadoPagoConfig, Payment } = require("mercadopago");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
+// 🔐 CONFIG MERCADO PAGO (SDK NOVO)
+const client = new MercadoPagoConfig({
+  accessToken: "APP_USR-964750908841284-042013-a2357a68ad09b64c752997470d8f29c7-1812220991"
+});
+
+const payment = new Payment(client);
+
+// 🔥 TESTE
 app.get("/", (req, res) => {
   res.send("Servidor PIX rodando 🚀");
 });
 
-const { MercadoPagoConfig, Payment } = require("mercadopago");
-
-const client = new MercadoPagoConfig({
-  accessToken: "APP_USR-964750908841284-042013-a2357a68ad09b64c752997470d8f29c7-1812220991",
-});
-
-const payment = new Payment(client);
+// 🔥 CRIAR PIX
 app.post("/pix", async (req, res) => {
   try {
-    const payment_data = {
-      transaction_amount: 1,
-      description: "Pagamento teste",
-      payment_method_id: "pix",
-      payer: {
-        email: "teste@teste.com",
-      },
+    const { valor, descricao } = req.body;
 
-      // 🔥 ESSENCIAL
-      notification_url: "https://pix-server-fscq.onrender.com/webhook",
-    };
+    const pagamento = await payment.create({
+      body: {
+        transaction_amount: Number(valor),
+        description: descricao,
+        payment_method_id: "pix",
+        payer: {
+          email: "cliente@email.com"
+        }
+      }
+    });
 
-    const result = await mercadopago.payment.create(payment_data);
+    res.json({
+      id: pagamento.id,
+      qr_code: pagamento.point_of_interaction.transaction_data.qr_code,
+      qr_code_base64: pagamento.point_of_interaction.transaction_data.qr_code_base64
+    });
 
-    res.json(result.body);
   } catch (error) {
-    console.error("Erro ao criar PIX:", error.message);
+    console.error("Erro PIX:", error);
     res.status(500).send("Erro ao gerar PIX");
   }
 });
 
-app.post("/webhook", async (req, res) => {
-  console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
-
+// 🔥 CONSULTAR STATUS
+app.get("/status/:id", async (req, res) => {
   try {
-    if (req.body.type === "payment") {
-      const paymentId = req.body.data.id;
+    const pagamento = await payment.get({
+      id: req.params.id
+    });
 
-      const paymentData = await payment.get({ id: paymentId });
+    res.json({
+      status: pagamento.status
+    });
 
-console.log("Status do pagamento:", paymentData.status);
-
-if (paymentData.status === "approved") {
-  console.log("✅ PAGAMENTO APROVADO!");
-}
-
-      console.log("Status do pagamento:", payment.body.status);
-
-      if (payment.body.status === "approved") {
-        console.log("✅ PAGAMENTO APROVADO!");
-      }
-    }
   } catch (error) {
-    console.error("Erro no webhook:", error.message);
+    console.error("Erro status:", error);
+    res.status(500).send("Erro ao consultar status");
   }
+});
 
+// 🔥 WEBHOOK
+app.post("/webhook", (req, res) => {
+  console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
   res.sendStatus(200);
 });
+
+// 🚀 PORTA (Render)
 const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
