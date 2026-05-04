@@ -13,12 +13,12 @@ const client = new MercadoPagoConfig({
 
 const payment = new Payment(client);
 
-// 🔥 TESTE
+// 🔥 TESTE SERVER
 app.get("/", (req, res) => {
   res.send("Servidor PIX rodando 🚀");
 });
 
-// 🔥 CRIAR PIX
+// 💰 CRIAR PIX
 app.post("/pix", async (req, res) => {
   try {
     const { valor, descricao } = req.body;
@@ -41,31 +41,31 @@ app.post("/pix", async (req, res) => {
     });
 
   } catch (error) {
-    console.error("Erro PIX:", error);
+    console.error("Erro ao gerar PIX:", error);
     res.status(500).send("Erro ao gerar PIX");
   }
 });
 
-// 🔥 CONSULTAR STATUS
-app.get("/status/:id", async (req, res) => {
-  try {
-    const pagamento = await payment.get({
-      id: req.params.id
-    });
-
-    res.json({
-      status: pagamento.status
-    });
-
-  } catch (error) {
-    console.error("Erro status:", error);
-    res.status(500).send("Erro ao consultar status");
-  }
-});
-
-// 🔥 WEBHOOK
-app.post("/webhook", (req, res) => {
+// 🔔 WEBHOOK MERCADO PAGO
+app.post("/webhook", async (req, res) => {
   console.log("Webhook recebido:", JSON.stringify(req.body, null, 2));
+
+  try {
+    if (req.body.type === "payment") {
+      const paymentId = req.body.data.id;
+
+      const pagamento = await payment.get({ id: paymentId });
+
+      console.log("Status do pagamento:", pagamento.status);
+
+      if (pagamento.status === "approved") {
+        console.log("✅ PAGAMENTO APROVADO!");
+      }
+    }
+  } catch (error) {
+    console.error("Erro no webhook:", error.message);
+  }
+
   res.sendStatus(200);
 });
 
